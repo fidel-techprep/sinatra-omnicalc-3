@@ -4,9 +4,55 @@
     <title>Sinatra Template</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      .link-button {
+        background: none; 
+        border: none;
+        color: blue; 
+        text-decoration: underline;
+        padding: 0;
+        font-family: serif;
+        font-size: 16px;
+      }
+
+      .link-button:hover {
+        color: darkblue; 
+        text-decoration: none;
+      }
+
+      .link-button:focus {
+        outline: none; 
+      }
+
+      .navbar {
+        display: flex;
+        justify-content: space-around;
+      }
+    
+    </style>
   </head>
 
   <body>
+  <div class="navbar">
+      <div>
+        <a href="/umbrella">
+          Umbrella
+        </a>
+      </div>
+
+      <div>
+        <a href="/message">
+          Single AI message
+        </a>
+      </div>
+
+      <div>
+        <a href="/chat">
+          AI Chat
+        </a>
+      </div>
+    </div>
+
     <%= yield %>
   </body>
 </html>

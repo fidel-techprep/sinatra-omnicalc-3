@@ -1,0 +1,19 @@
+<h1>Should I take an umbrella?</h1>
+
+<form action="/process_umbrella" method="post">
+  <label for="location_field">Where are you located?</label>
+  <input id="location_field" type="text" name="user_loc">
+
+  <button>Submit</button>
+</form>
+
+
+<% if cookies["last_location"] %>
+<div style="padding-top: 10px">
+  <form action="/process_umbrella" method="post">
+    <div>Last searched location: <%= cookies["last_location"] %></div>
+    <input type="hidden" name="user_loc" value="<%= cookies["last_location"] %>">
+    <button class="link-button">Search for that location again</button>
+  </form>
+</div>
+<% end %>
