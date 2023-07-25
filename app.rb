@@ -6,6 +6,7 @@ include ERB::Util
 
 GMAPS_KEY = ENV.fetch("GMAPS_KEY")
 PIRATE_WEATHER_KEY = ENV.fetch("PIRATE_WEATHER_KEY")
+OPENAI_API_KEY = ENV.fetch("OPENAI_API_KEY")
 get("/") do
   erb("Welcome to Omnicalc 3")
 end
@@ -58,6 +59,43 @@ post("/process_umbrella") do
   erb(:umbrella_results)
 end
 
+
 get("/message") do
+  erb(:single_message_form)
+end
+
+post("/process_single_message") do
   
+  @user_message = params["the_message"]
+  request_headers_hash = {
+    "Authorization" => "Bearer #{ENV.fetch("OPENAI_API_KEY")}",
+    "content-type" => "application/json"
+  }
+
+  request_body_hash = {
+    "model" => "gpt-3.5-turbo",
+    "messages" => [
+      {
+        "role" => "system",
+        "content" => "You are a helpful assistant who talks like Shakespeare."
+      },
+      {
+        "role" => "user",
+        "content" => @user_message
+      }
+    ]
+  }
+
+  request_body_json = JSON.generate(request_body_hash)
+
+  raw_response = HTTP.headers(request_headers_hash).post(
+    "https://api.openai.com/v1/chat/completions",
+    :body => request_body_json
+  ).to_s
+
+  parsed_response = JSON.parse(raw_response)
+  
+  @gpt_response = parsed_response.dig("choices", 0, "message", "content")
+  
+  erb(:single_message_results)
 end
