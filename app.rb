@@ -2,7 +2,7 @@ require "sinatra"
 require "sinatra/reloader"
 require "http"
 require "sinatra/cookies"
-include ERB::Util
+include Rack::Utils
 
 GMAPS_KEY = ENV.fetch("GMAPS_KEY")
 PIRATE_WEATHER_KEY = ENV.fetch("PIRATE_WEATHER_KEY")
@@ -18,7 +18,7 @@ end
 post("/process_umbrella") do
   @user_location = params.fetch("user_loc")
   # Construct Google Maps' URL
-  gmaps_url = "https://maps.googleapis.com/maps/api/geocode/json?address=#{url_encode(@user_location)}&key=#{GMAPS_KEY}"
+  gmaps_url = "https://maps.googleapis.com/maps/api/geocode/json?address=#{escape(@user_location)}&key=#{GMAPS_KEY}"
 
   # GET data from Google Maps API
   raw_location = JSON.parse(HTTP.get(gmaps_url))
@@ -64,9 +64,8 @@ get("/message") do
   erb(:single_message_form)
 end
 
-post("/process_single_message") do
+def query_gpt(messages)
   
-  @user_message = params["the_message"]
   request_headers_hash = {
     "Authorization" => "Bearer #{ENV.fetch("OPENAI_API_KEY")}",
     "content-type" => "application/json"
@@ -74,16 +73,7 @@ post("/process_single_message") do
 
   request_body_hash = {
     "model" => "gpt-3.5-turbo",
-    "messages" => [
-      {
-        "role" => "system",
-        "content" => "You are a helpful assistant who talks like Shakespeare."
-      },
-      {
-        "role" => "user",
-        "content" => @user_message
-      }
-    ]
+    "messages" => messages
   }
 
   request_body_json = JSON.generate(request_body_hash)
@@ -94,8 +84,63 @@ post("/process_single_message") do
   ).to_s
 
   parsed_response = JSON.parse(raw_response)
+  pp parsed_response
+end
+
+post("/process_single_message") do
+  
+  @user_message = params["the_message"]
+  request_headers_hash = {
+    "Authorization" => "Bearer #{ENV.fetch("OPENAI_API_KEY")}",
+    "content-type" => "application/json"
+  }
+
+  request_body_messages = [
+    {
+      "role" => "system",
+      "content" => "You are a helpful assistant who talks like Shakespeare."
+    },
+    {
+      "role" => "user",
+      "content" => @user_message
+    }
+  ]
+  
+  parsed_response = query_gpt(request_body_messages)
   
   @gpt_response = parsed_response.dig("choices", 0, "message", "content")
   
   erb(:single_message_results)
+end
+
+get("/chat") do
+  erb(:chat)
+end
+
+post("/add_message_to_chat") do
+  @user_message = params["user_message"]
+
+  user_message_hash =  {
+    "role" => "user",
+    "content" => @user_message
+  }
+
+  @chat_history = cookies["chat_history"].empty? ? [] : JSON.parse(cookies["chat_history"])
+  @chat_history << user_message_hash
+  
+  parsed_response = query_gpt(@chat_history)
+  @gpt_response = parsed_response.dig("choices", 0, "message", "content")
+
+  gpt_response_hash =  {
+    "role" => "assistant",
+    "content" => @gpt_response
+  }
+  @chat_history << gpt_response_hash
+  cookies["chat_history"] = JSON.generate(@chat_history)
+  erb(:chat)
+end
+
+post("/clear_chat") do
+  cookies["chat_history"] = nil
+  erb(:chat)
 end
